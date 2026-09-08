@@ -1,0 +1,1 @@
+import {z} from "zod"; export const leadSchema=z.object({name:z.string().min(3),email:z.string().email(),whatsapp:z.string().min(10),cep:z.string().regex(/^\d{5}-?\d{3}$/),address:z.string().min(5)}); export type LeadInput=z.infer<typeof leadSchema>

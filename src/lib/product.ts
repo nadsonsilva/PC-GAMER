@@ -1,0 +1,1 @@
+export const product={name:"PC Gamer Titan Elite",priceCents:499900,currency:"BRL",specs:[["Processador","AMD Ryzen 7 5700X"],["Placa de vídeo","NVIDIA GeForce RTX 4060 8GB"],["Memória","32GB DDR4 (2x16GB) 3200MHz"],["Armazenamento","SSD NVMe M.2 1TB"],["Fonte","650W 80 Plus Bronze"],["Gabinete","Mid Tower ARGB com vidro temperado"]]} as const

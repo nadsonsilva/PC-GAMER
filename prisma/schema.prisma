@@ -1,0 +1,6 @@
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "sqlite" url = env("DATABASE_URL") }
+model Lead { id String @id @default(cuid()) name String email String whatsapp String cep String address String? createdAt DateTime @default(now()) orders Order[] otps Otp[] }
+model Otp { id String @id @default(cuid()) leadId String codeHash String expiresAt DateTime usedAt DateTime? createdAt DateTime @default(now()) lead Lead @relation(fields:[leadId], references:[id], onDelete:Cascade) }
+model Order { id String @id @default(cuid()) number Int @unique @default(autoincrement()) leadId String amountCents Int status OrderStatus @default(PENDING_PAYMENT) paymentId String? createdAt DateTime @default(now()) paidAt DateTime? lead Lead @relation(fields:[leadId], references:[id]) }
+enum OrderStatus { PENDING_PAYMENT PAID PROCESSING SHIPPED }
