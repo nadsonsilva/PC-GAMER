@@ -10,4 +10,11 @@ services:
     environment:
       NODE_ENV: development
       DATABASE_URL: file:./dev.db
-    command: npm run dev
+      OTP_HASH_SECRET: ${OTP_HASH_SECRET:-development-only-secret-change-me}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: "${SMTP_FROM:-PC Gamer <no-reply@example.com>}"
+      NEXT_PUBLIC_WHATSAPP_NUMBER: ${NEXT_PUBLIC_WHATSAPP_NUMBER:-5599999999999}
+    command: sh -c "npx prisma generate && npx prisma db push && npm run dev"
