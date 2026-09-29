@@ -26,3 +26,7 @@ export const resendOtpSchema = z.object({
 });
 
 export type LeadInput = z.infer<typeof leadSchema>;
+
+export const createOrderSchema = z.object({
+  email: z.string().trim().toLowerCase().email("E-mail inválido."),
+});

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import {
   Check,
   ChevronDown,
@@ -93,14 +94,15 @@ export default function Home() {
 
         <div className="glass relative rounded-[2rem] p-5 sm:p-8">
           <div className="pc-visual relative aspect-square overflow-hidden rounded-3xl border border-white/10">
-            <div className="absolute inset-0 grid place-items-center">
-              <div className="pc-case">
-                <div className="pc-fan fan-one" />
-                <div className="pc-fan fan-two" />
-                <div className="pc-fan fan-three" />
-                <div className="pc-gpu" />
-              </div>
-            </div>
+            <Image
+              src="/pc-gamer.png"
+              alt="PC Gamer Titan Elite"
+              fill
+              priority
+              sizes="(max-width: 1024px) 100vw, 45vw"
+              className="object-contain p-4"
+            />
+
             <div className="absolute bottom-4 left-4 rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-xs font-semibold text-slate-300 backdrop-blur">
               Titan Elite • ARGB
             </div>

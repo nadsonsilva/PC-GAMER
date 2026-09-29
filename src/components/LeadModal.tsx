@@ -1,10 +1,10 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { CheckCircle2, Loader2, Mail, MapPin, RefreshCw, X } from "lucide-react";
+import { CheckCircle2, CreditCard, Loader2, Mail, MapPin, RefreshCw, X } from "lucide-react";
 
 type Props = { open: boolean; onClose: () => void };
-type Step = "form" | "otp" | "success";
+type Step = "form" | "otp" | "checkout";
 
 type LeadForm = {
   name: string;
@@ -37,6 +37,7 @@ export default function LeadModal({ open, onClose }: Props) {
   const [loading, setLoading] = useState(false);
   const [searchingCep, setSearchingCep] = useState(false);
   const [seconds, setSeconds] = useState(0);
+  const [orderNumber, setOrderNumber] = useState<number | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -63,6 +64,7 @@ export default function LeadModal({ open, onClose }: Props) {
     setCode("");
     setError("");
     setSeconds(0);
+    setOrderNumber(null);
     onClose();
   }
 
@@ -134,7 +136,7 @@ export default function LeadModal({ open, onClose }: Props) {
         return;
       }
 
-      setStep("success");
+      setStep("checkout");
     } catch {
       setError("Falha de conexão com o servidor. Tente novamente.");
     } finally {
@@ -170,6 +172,33 @@ export default function LeadModal({ open, onClose }: Props) {
     }
   }
 
+  async function createOrderAndCheckout() {
+    if (loading) return;
+    setError("");
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: form.email }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.message ?? "Não foi possível criar o pedido.");
+        return;
+      }
+
+      setOrderNumber(data.orderNumber);
+      window.location.assign(data.checkoutUrl);
+    } catch {
+      setError("Falha de conexão ao iniciar o pagamento.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/75 p-4 backdrop-blur-sm"
@@ -181,12 +210,12 @@ export default function LeadModal({ open, onClose }: Props) {
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.22em] text-indigo-300">
-              {step === "form" ? "Cadastro" : step === "otp" ? "Segurança" : "Concluído"}
+              {step === "form" ? "Cadastro" : step === "otp" ? "Segurança" : "Pedido e pagamento"}
             </p>
             <h2 id="lead-modal-title" className="mt-1 text-2xl font-black sm:text-3xl">
               {step === "form" && "Começar compra"}
               {step === "otp" && "Validar e-mail"}
-              {step === "success" && "E-mail validado"}
+              {step === "checkout" && "E-mail validado"}
             </h2>
           </div>
           <button
@@ -203,77 +232,35 @@ export default function LeadModal({ open, onClose }: Props) {
           <form onSubmit={submitLead} className="mt-6 space-y-4">
             <label className="block">
               <span className="mb-1.5 block text-sm font-semibold text-slate-300">Nome completo</span>
-              <input
-                required
-                minLength={3}
-                autoComplete="name"
-                value={form.name}
-                onChange={(event) => setForm({ ...form, name: event.target.value })}
-                placeholder="Seu nome"
-                className="field"
-              />
+              <input required minLength={3} autoComplete="name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Seu nome" className="field" />
             </label>
 
             <label className="block">
               <span className="mb-1.5 block text-sm font-semibold text-slate-300">E-mail</span>
-              <input
-                required
-                type="email"
-                autoComplete="email"
-                value={form.email}
-                onChange={(event) => setForm({ ...form, email: event.target.value.trimStart() })}
-                placeholder="voce@email.com"
-                className="field"
-              />
+              <input required type="email" autoComplete="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value.trimStart() })} placeholder="voce@email.com" className="field" />
             </label>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block">
                 <span className="mb-1.5 block text-sm font-semibold text-slate-300">WhatsApp</span>
-                <input
-                  required
-                  inputMode="tel"
-                  autoComplete="tel"
-                  value={form.whatsapp}
-                  onChange={(event) => setForm({ ...form, whatsapp: maskWhatsapp(event.target.value) })}
-                  placeholder="(92) 99999-9999"
-                  className="field"
-                />
+                <input required inputMode="tel" autoComplete="tel" value={form.whatsapp} onChange={(event) => setForm({ ...form, whatsapp: maskWhatsapp(event.target.value) })} placeholder="(92) 99999-9999" className="field" />
               </label>
 
               <label className="block">
                 <span className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-slate-300">
                   CEP {searchingCep && <Loader2 size={14} className="animate-spin" />}
                 </span>
-                <input
-                  required
-                  inputMode="numeric"
-                  autoComplete="postal-code"
-                  value={form.cep}
-                  onChange={(event) => {
-                    const value = maskCep(event.target.value);
-                    setForm({ ...form, cep: value });
-                    if (value.replace(/\D/g, "").length === 8) lookupCep(value);
-                  }}
-                  placeholder="00000-000"
-                  className="field"
-                />
+                <input required inputMode="numeric" autoComplete="postal-code" value={form.cep} onChange={(event) => {
+                  const value = maskCep(event.target.value);
+                  setForm({ ...form, cep: value });
+                  if (value.replace(/\D/g, "").length === 8) lookupCep(value);
+                }} placeholder="00000-000" className="field" />
               </label>
             </div>
 
             <label className="block">
-              <span className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-slate-300">
-                <MapPin size={15} /> Endereço de entrega
-              </span>
-              <textarea
-                required
-                minLength={5}
-                rows={3}
-                value={form.address}
-                onChange={(event) => setForm({ ...form, address: event.target.value })}
-                placeholder="Rua, número, bairro, cidade/UF"
-                className="field resize-none"
-              />
+              <span className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-slate-300"><MapPin size={15} /> Endereço de entrega</span>
+              <textarea required minLength={5} rows={3} value={form.address} onChange={(event) => setForm({ ...form, address: event.target.value })} placeholder="Rua, número, bairro, cidade/UF" className="field resize-none" />
             </label>
 
             {error && <p className="rounded-xl border border-red-400/20 bg-red-400/10 p-3 text-sm text-red-200">{error}</p>}
@@ -282,9 +269,7 @@ export default function LeadModal({ open, onClose }: Props) {
               {loading ? <Loader2 className="animate-spin" size={20} /> : <Mail size={19} />}
               {loading ? "Enviando..." : "Cadastrar e enviar código"}
             </button>
-            <p className="text-center text-xs leading-5 text-slate-500">
-              Seus dados são usados somente para contato, entrega e validação desta compra.
-            </p>
+            <p className="text-center text-xs leading-5 text-slate-500">Seus dados são usados somente para contato, entrega e validação desta compra.</p>
           </form>
         )}
 
@@ -296,18 +281,7 @@ export default function LeadModal({ open, onClose }: Props) {
 
             <label className="mt-5 block">
               <span className="mb-2 block text-sm font-semibold text-slate-300">Código de verificação</span>
-              <input
-                required
-                autoFocus
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                maxLength={6}
-                pattern="[0-9]{6}"
-                value={code}
-                onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
-                placeholder="000000"
-                className="field text-center text-3xl font-black tracking-[0.32em]"
-              />
+              <input required autoFocus inputMode="numeric" autoComplete="one-time-code" maxLength={6} pattern="[0-9]{6}" value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="000000" className="field text-center text-3xl font-black tracking-[0.32em]" />
             </label>
 
             {error && <p className="mt-4 rounded-xl border border-red-400/20 bg-red-400/10 p-3 text-sm text-red-200">{error}</p>}
@@ -317,30 +291,27 @@ export default function LeadModal({ open, onClose }: Props) {
               {loading ? "Validando..." : "Validar e-mail"}
             </button>
 
-            <button
-              type="button"
-              disabled={seconds > 0 || loading}
-              onClick={resendCode}
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 px-4 py-3 text-sm font-bold text-slate-300 transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50"
-            >
+            <button type="button" disabled={seconds > 0 || loading} onClick={resendCode} className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 px-4 py-3 text-sm font-bold text-slate-300 transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50">
               <RefreshCw size={16} />
               {seconds > 0 ? `Reenviar em ${seconds}s` : "Reenviar código"}
             </button>
           </form>
         )}
 
-        {step === "success" && (
-          <div className="py-8 text-center">
-            <div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-emerald-500/10 text-emerald-400">
-              <CheckCircle2 size={44} />
-            </div>
-            <h3 className="mt-5 text-2xl font-black">Validação concluída</h3>
-            <p className="mx-auto mt-2 max-w-sm text-slate-400">
-              Seu lead foi salvo no banco e o e-mail foi confirmado. O fluxo está pronto para seguir para o checkout na próxima etapa do projeto.
+        {step === "checkout" && (
+          <div className="py-7 text-center">
+            <div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-emerald-500/10 text-emerald-400"><CheckCircle2 size={44} /></div>
+            <h3 className="mt-5 text-2xl font-black">Pronto para criar o pedido</h3>
+            <p className="mx-auto mt-2 max-w-md text-slate-400">
+              Seu e-mail foi confirmado. Ao continuar, o sistema cria o pedido com status <b className="text-slate-200">Aguardando pagamento</b> e abre o checkout do Mercado Pago.
             </p>
-            <button type="button" onClick={close} className="primary-button mx-auto mt-6 px-8 py-3">
-              Fechar
+            {orderNumber && <p className="mt-3 text-sm font-bold text-indigo-300">Pedido #{orderNumber}</p>}
+            {error && <p className="mt-4 rounded-xl border border-red-400/20 bg-red-400/10 p-3 text-left text-sm text-red-200">{error}</p>}
+            <button type="button" disabled={loading} onClick={createOrderAndCheckout} className="primary-button mx-auto mt-6 px-8 py-3.5">
+              {loading ? <Loader2 className="animate-spin" size={20} /> : <CreditCard size={20} />}
+              {loading ? "Criando pedido..." : "Ir para o Mercado Pago"}
             </button>
+            <p className="mt-3 text-xs leading-5 text-slate-500">O pagamento é concluído no ambiente do Mercado Pago. O webhook confirma o status no servidor.</p>
           </div>
         )}
       </div>

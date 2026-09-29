@@ -36,13 +36,21 @@ model Otp {
 }
 
 model Order {
-  number      Int         @id @default(autoincrement())
-  id          String      @unique @default(cuid())
-  leadId      String
-  amountCents Int
-  status      String      @default("PENDING_PAYMENT")
-  paymentId   String?
-  createdAt   DateTime    @default(now())
-  paidAt      DateTime?
-  lead        Lead        @relation(fields: [leadId], references: [id])
+  number            Int       @id @default(autoincrement())
+  id                String    @unique @default(cuid())
+  leadId            String
+  amountCents       Int
+  status            String    @default("PENDING_PAYMENT")
+  preferenceId      String?
+  checkoutUrl       String?
+  paymentId         String?
+  lastPaymentStatus String?
+  paymentUpdatedAt  DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  paidAt            DateTime?
+  lead              Lead      @relation(fields: [leadId], references: [id])
+
+  @@index([status])
+  @@index([paymentId])
 }
