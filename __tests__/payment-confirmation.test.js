@@ -57,7 +57,18 @@ test("atualização concorrente não sobrescreve status nem envia e-mail", async
   expect(mockEmail).not.toHaveBeenCalled();
 });
 test("reembolso de pagamento diferente não altera pedido", async () => {
-  mockFind.mockResolvedValue({ ...baseOrder, status: "PAID", paymentId: "888" });
-  expect(await processVerifiedPayment({ ...payment, status: "refunded" })).toMatchObject({ ignored: "refund_not_original_payment" });
+  mockFind.mockResolvedValue({
+    ...baseOrder,
+    status: "PAID",
+    paymentId: "888"
+  });
+  expect(
+    await processVerifiedPayment({
+      ...payment,
+      status: "refunded"
+    })
+  ).toMatchObject({
+    ignored: "different_payment"
+  });
   expect(mockUpdateMany).not.toHaveBeenCalled();
 });
