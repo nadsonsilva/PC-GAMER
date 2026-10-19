@@ -106,7 +106,7 @@ async function createSmtpConnection(host: string, port: number) {
   return { socket: secureSocket, reader: new SmtpReader(secureSocket), greeted: true };
 }
 
-export async function sendOtpEmail(to: string, code: string) {
+export async function sendSmtpEmail(to: string, subject: string, message: string) {
   const host = process.env.SMTP_HOST;
   const port = Number(process.env.SMTP_PORT || "587");
   const user = process.env.SMTP_USER;
@@ -114,50 +114,32 @@ export async function sendOtpEmail(to: string, code: string) {
   const from = process.env.SMTP_FROM || "PC Gamer <no-reply@example.com>";
 
   if (!host || !user || !password) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error("Configuração SMTP incompleta.");
-    }
-    console.info(`[DEV] OTP para ${to}: ${code}`);
+    if (process.env.NODE_ENV === "production") throw new Error("Configuração SMTP incompleta.");
+    console.info(`[DEV] E-mail simulado para ${to}: ${subject}\n${message}`);
     return { simulated: true };
   }
 
   let socket: AnySocket | undefined;
   let reader: SmtpReader | undefined;
-
   try {
     const connection = await createSmtpConnection(host, port);
     socket = connection.socket;
     reader = connection.reader;
-
-    if (port === 465) {
-      await expect(reader, [220]);
-    }
-
+    if (port === 465) await expect(reader, [220]);
     await command(socket, reader, "EHLO pc-gamer.local", [250]);
     await command(socket, reader, "AUTH LOGIN", [334]);
     await command(socket, reader, Buffer.from(user).toString("base64"), [334]);
     await command(socket, reader, Buffer.from(password).toString("base64"), [235]);
-
     await command(socket, reader, `MAIL FROM:<${fromAddress(from)}>`, [250]);
     await command(socket, reader, `RCPT TO:<${to}>`, [250, 251]);
     await command(socket, reader, "DATA", [354]);
-
+    const safeSubject = subject.replace(/[\r\n]/g, " ");
+    const safeTo = to.replace(/[\r\n]/g, "");
     const body = [
-      `From: ${from}`,
-      `To: ${to}`,
-      `Subject: ${encodeHeader("Seu código de verificação - PC Gamer")}`,
-      "MIME-Version: 1.0",
-      'Content-Type: text/plain; charset="UTF-8"',
-      "Content-Transfer-Encoding: 8bit",
-      "",
-      "Seu código de verificação é:",
-      "",
-      code,
-      "",
-      "Ele expira em 10 minutos e pode ser usado apenas uma vez.",
-      "Se você não solicitou este código, ignore este e-mail.",
+      `From: ${from}`, `To: ${safeTo}`, `Subject: ${encodeHeader(safeSubject)}`,
+      "MIME-Version: 1.0", 'Content-Type: text/plain; charset="UTF-8"',
+      "Content-Transfer-Encoding: 8bit", "", message,
     ].join("\r\n");
-
     socket.write(`${dotStuff(body)}\r\n.\r\n`);
     await expect(reader, [250]);
     await command(socket, reader, "QUIT", [221]);
@@ -166,4 +148,21 @@ export async function sendOtpEmail(to: string, code: string) {
     reader?.dispose();
     socket?.end();
   }
+}
+
+export async function sendOtpEmail(to: string, code: string) {
+  return sendSmtpEmail(to, "Seu código de verificação - PC Gamer", [
+    "Seu código de verificação é:", "", code, "",
+    "Ele expira em 10 minutos e pode ser usado apenas uma vez.",
+    "Se você não solicitou este código, ignore este e-mail.",
+  ].join("\n"));
+}
+
+export async function sendPaymentConfirmationEmail(to: string, name: string, orderNumber: number, amountCents: number) {
+  const amount = (amountCents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  return sendSmtpEmail(to, `Pagamento confirmado - Pedido #${orderNumber} - PC Gamer`, [
+    `Olá, ${name}!`, "", "O seu pagamento foi confirmado pelo Mercado Pago.",
+    `Pedido: #${orderNumber}`, `Valor: ${amount}`, "Status: Pago", "",
+    "Obrigado pela compra!", "Equipe PC Gamer",
+  ].join("\n"));
 }

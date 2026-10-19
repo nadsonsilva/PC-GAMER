@@ -20,6 +20,8 @@ export type MercadoPagoPayment = {
   status?: string;
   external_reference?: string | null;
   transaction_amount?: number;
+  currency_id?: string;
+  date_approved?: string | null;
 };
 
 export async function createCheckoutPreference(input: {

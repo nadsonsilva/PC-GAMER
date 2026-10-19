@@ -49,6 +49,8 @@ model Order {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   paidAt            DateTime?
+  confirmationEmailSentAt DateTime?
+  confirmationEmailClaimedAt DateTime?
   lead              Lead      @relation(fields: [leadId], references: [id])
 
   @@index([status])

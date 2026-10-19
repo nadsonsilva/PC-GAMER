@@ -1,6 +1,6 @@
 # PC GAMER — Titan Elite
 
-Landing page acadêmica em **Next.js 14 + TypeScript + Tailwind + Prisma**, atualizada até a **Semana 4 — Pedidos e Pagamento**.
+Landing page acadêmica em **Next.js 14 + TypeScript + Tailwind + Prisma**, atualizada até a **Semana 5 — Confirmação e Integrações**.
 
 ## Implementado
 
@@ -33,7 +33,14 @@ Landing page acadêmica em **Next.js 14 + TypeScript + Tailwind + Prisma**, atua
 - logs do processamento do webhook;
 - testes dos estados e da validação da assinatura.
 
-Veja detalhes em `docs/SEMANA_4.md`.
+Veja detalhes em `docs/SEMANA_4.md` e `docs/SEMANA_5.md`.
+
+### Semana 5 — Confirmação e Integrações
+- confirmação do pagamento na API do Mercado Pago;
+- validação de moeda, valor e assinatura;
+- proteção contra atualizações atrasadas e notificações duplicadas;
+- e-mail de pagamento confirmado com controle de envio;
+- novos testes automatizados.
 
 ## Estrutura principal
 

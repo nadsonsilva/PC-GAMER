@@ -21,3 +21,9 @@ describe("estados do pedido", () => {
     expect(orderStatusLabel(ORDER_STATUS.PAID)).toBe("Pago");
   });
 });
+
+describe("proteção do status", () => {
+  test("status desconhecido não aprova pagamento", () => {
+    expect(mapMercadoPagoStatus("mystery")).toBe(ORDER_STATUS.PENDING_PAYMENT);
+  });
+});
