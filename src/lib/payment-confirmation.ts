@@ -36,9 +36,17 @@ export async function processVerifiedPayment(payment: MercadoPagoPayment) {
     ? ORDER_STATUS.PAYMENT_REVIEW
     : status;
 
+  // Compare-and-set prevents a late or simultaneous webhook from overwriting a newer state.
+  // The same transition is idempotent and a refund requires the original payment ID.
+  const transitions = nextStatus === ORDER_STATUS.REFUNDED
+    ? { status: ORDER_STATUS.PAID, paymentId }
+    : { status: order.status, paymentId: order.paymentId };
+  if (nextStatus === ORDER_STATUS.REFUNDED && (order.status !== ORDER_STATUS.PAID || order.paymentId !== paymentId)) {
+    return { ignored: "refund_not_original_payment" };
+  }
   const now = new Date();
-  await prisma.order.update({
-    where: { id: order.id },
+  const updated = await prisma.order.updateMany({
+    where: { id: order.id, ...transitions },
     data: {
       paymentId,
       lastPaymentStatus: payment.status ?? null,
@@ -47,6 +55,7 @@ export async function processVerifiedPayment(payment: MercadoPagoPayment) {
       ...(nextStatus === ORDER_STATUS.PAID && !order.paidAt ? { paidAt: now } : {}),
     },
   });
+  if (updated.count === 0) return { ignored: "concurrent_transition" };
 
   if (nextStatus === ORDER_STATUS.PAID) {
     // Atomic claim ensures concurrent duplicate webhook calls do not send two emails.

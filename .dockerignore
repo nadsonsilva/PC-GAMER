@@ -7,3 +7,9 @@ node_modules
 *.db
 *.db-journal
 coverage
+
+.git
+.env*
+!.env.example
+*.zip
+coverage

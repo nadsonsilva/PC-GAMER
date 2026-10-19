@@ -11,13 +11,27 @@ class SmtpReader {
   private queue: string[][] = [];
   private waiters: Array<(lines: string[]) => void> = [];
   private onDataBound = (chunk: Buffer) => this.onData(chunk);
+  private onErrorBound = (error: Error) => this.fail(error);
+  private onCloseBound = () => this.fail(new Error("Conexão SMTP encerrada antes da resposta."));
+  private failures: Array<(error: Error) => void> = [];
+  private terminalError: Error | null = null;
 
   constructor(private socket: AnySocket) {
     socket.on("data", this.onDataBound);
+    socket.on("error", this.onErrorBound);
+    socket.on("close", this.onCloseBound);
   }
 
   dispose() {
     this.socket.off("data", this.onDataBound);
+    this.socket.off("error", this.onErrorBound);
+    this.socket.off("close", this.onCloseBound);
+  }
+
+  private fail(error: Error) {
+    this.terminalError = error;
+    for (const reject of this.failures.splice(0)) reject(error);
+    this.waiters.length = 0;
   }
 
   private onData(chunk: Buffer) {
@@ -34,7 +48,7 @@ class SmtpReader {
         const complete = this.responseLines;
         this.responseLines = [];
         const waiter = this.waiters.shift();
-        if (waiter) waiter(complete);
+        if (waiter) { this.failures.shift(); waiter(complete); }
         else this.queue.push(complete);
       }
       lineEnd = this.buffer.indexOf("\n");
@@ -44,7 +58,11 @@ class SmtpReader {
   read() {
     const queued = this.queue.shift();
     if (queued) return Promise.resolve(queued);
-    return new Promise<string[]>((resolve) => this.waiters.push(resolve));
+    if (this.terminalError) return Promise.reject(this.terminalError);
+    return new Promise<string[]>((resolve, reject) => {
+      this.waiters.push(resolve);
+      this.failures.push(reject);
+    });
   }
 }
 
@@ -68,7 +86,7 @@ async function command(socket: AnySocket, reader: SmtpReader, value: string, acc
 
 function waitForConnect(socket: AnySocket, event: "connect" | "secureConnect") {
   return new Promise<void>((resolve, reject) => {
-    socket.once(event, () => resolve());
+    socket.once(event, () => { socket.off("error", reject); resolve(); });
     socket.once("error", reject);
   });
 }
@@ -88,12 +106,14 @@ function dotStuff(value: string) {
 async function createSmtpConnection(host: string, port: number) {
   if (port === 465) {
     const socket = tls.connect({ host, port, servername: host, rejectUnauthorized: true });
+    socket.setTimeout(15000, () => socket.destroy(new Error("Timeout SMTP")));
     const reader = new SmtpReader(socket);
     await waitForConnect(socket, "secureConnect");
     return { socket, reader };
   }
 
   const plainSocket = net.connect({ host, port });
+  plainSocket.setTimeout(15000, () => plainSocket.destroy(new Error("Timeout SMTP")));
   const plainReader = new SmtpReader(plainSocket);
   await waitForConnect(plainSocket, "connect");
   await expect(plainReader, [220]);
@@ -124,6 +144,7 @@ export async function sendSmtpEmail(to: string, subject: string, message: string
   try {
     const connection = await createSmtpConnection(host, port);
     socket = connection.socket;
+    socket.setTimeout(15000, () => socket?.destroy(new Error("Tempo limite SMTP excedido.")));
     reader = connection.reader;
     if (port === 465) await expect(reader, [220]);
     await command(socket, reader, "EHLO pc-gamer.local", [250]);
@@ -146,7 +167,7 @@ export async function sendSmtpEmail(to: string, subject: string, message: string
     return { simulated: false };
   } finally {
     reader?.dispose();
-    socket?.end();
+    socket?.destroy();
   }
 }
 

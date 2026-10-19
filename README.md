@@ -154,3 +154,7 @@ Na tabela `Order`, a Semana 4 usa principalmente:
 - o pagamento é consultado diretamente no Mercado Pago antes da atualização;
 - o valor aprovado é conferido antes de marcar `PAID`;
 - `.env` não deve ser enviado ao repositório.
+
+
+## Semana 6 — Produção e entrega
+Veja [`docs/SEMANA_6.md`](docs/SEMANA_6.md) para deploy, analytics, observabilidade, CI, segurança, checklist de homologação e roteiro de defesa.

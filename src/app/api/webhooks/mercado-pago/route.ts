@@ -1,3 +1,4 @@
+import { logEvent, logFailure } from "@/lib/telemetry";
 import { NextResponse } from "next/server";
 import { getPayment, validateWebhookSignature } from "@/lib/mercado-pago";
 import { processVerifiedPayment } from "@/lib/payment-confirmation";
@@ -7,6 +8,7 @@ export const runtime = "nodejs";
 export async function POST(request: Request) {
   try {
     const url = new URL(request.url);
+    if (Number(request.headers.get("content-length") || 0) > 8192) return NextResponse.json({ ok: false }, { status: 413 });
     const body = await request.json().catch(() => ({}));
     const queryId = url.searchParams.get("data.id");
     const bodyId = body?.data?.id != null ? String(body.data.id) : null;
@@ -30,10 +32,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, message: "Pagamento divergente." }, { status: 400 });
     }
     const result = await processVerifiedPayment(payment);
-    console.info("Webhook Mercado Pago processado", { paymentId: dataId, result });
+    logEvent("webhook_processed", { status: "status" in result ? String(result.status) : "ignored" });
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
-    console.error("Erro no webhook Mercado Pago:", error);
+    logFailure("webhook_failed", error);
     return NextResponse.json({ ok: false, message: "Falha ao processar notificação." }, { status: 500 });
   }
 }

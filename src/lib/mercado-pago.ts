@@ -29,8 +29,11 @@ export async function createCheckoutPreference(input: {
   orderNumber: number;
   payerEmail: string;
 }) {
-  //const appUrl = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
+  const appUrl = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
   const configuredWebhook = process.env.MP_WEBHOOK_URL?.trim();
+  if (process.env.NODE_ENV === "production" && (!appUrl.startsWith("https://") || !configuredWebhook?.startsWith("https://"))) {
+    throw new Error("APP_URL e MP_WEBHOOK_URL devem usar HTTPS em produção.");
+  }
 
   const body: Record<string, unknown> = {
     items: [
@@ -45,12 +48,6 @@ export async function createCheckoutPreference(input: {
     ],
     payer: { email: input.payerEmail },
     external_reference: input.orderId,
-    /*back_urls: {
-      success: `${appUrl}/pedido/retorno?order=${input.orderNumber}&result=success`,
-      pending: `${appUrl}/pedido/retorno?order=${input.orderNumber}&result=pending`,
-      failure: `${appUrl}/pedido/retorno?order=${input.orderNumber}&result=failure`,
-    },
-    auto_return: "approved", */
     statement_descriptor: "PC GAMER",
     metadata: {
       order_id: input.orderId,
@@ -58,6 +55,15 @@ export async function createCheckoutPreference(input: {
     },
   };
 
+  // Mercado Pago rejects auto_return for localhost/non-public callback URLs.
+  if (appUrl.startsWith("https://")) {
+    body.back_urls = {
+      success: `${appUrl}/pedido/retorno?order=${input.orderNumber}&result=success`,
+      pending: `${appUrl}/pedido/retorno?order=${input.orderNumber}&result=pending`,
+      failure: `${appUrl}/pedido/retorno?order=${input.orderNumber}&result=failure`,
+    };
+    body.auto_return = "approved";
+  }
   if (configuredWebhook) body.notification_url = configuredWebhook;
 
   const response = await fetch(`${MP_API}/checkout/preferences`, {
@@ -69,6 +75,7 @@ export async function createCheckoutPreference(input: {
     },
     body: JSON.stringify(body),
     cache: "no-store",
+    signal: AbortSignal.timeout(15000),
   });
 
   const data = (await response.json()) as CheckoutPreference & { message?: string; error?: string };
@@ -90,6 +97,7 @@ export async function getPayment(paymentId: string) {
   const response = await fetch(`${MP_API}/v1/payments/${encodeURIComponent(paymentId)}`, {
     headers: { Authorization: `Bearer ${accessToken()}` },
     cache: "no-store",
+    signal: AbortSignal.timeout(15000),
   });
 
   const data = (await response.json()) as MercadoPagoPayment & { message?: string; error?: string };

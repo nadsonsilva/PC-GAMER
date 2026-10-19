@@ -5,3 +5,8 @@ node_modules
 *.db
 *.db-journal
 coverage
+
+.env.*
+!.env.example
+*.sqlite
+*.sqlite-journal

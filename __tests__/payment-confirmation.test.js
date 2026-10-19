@@ -20,7 +20,7 @@ beforeEach(() => {
 });
 test("aprova pagamento conferido e envia confirmação", async () => {
   expect(await processVerifiedPayment(payment)).toMatchObject({ status: "PAID" });
-  expect(mockUpdate.mock.calls[0][0].data.status).toBe("PAID");
+  expect(mockUpdateMany.mock.calls[0][0].data.status).toBe("PAID");
   expect(mockEmail).toHaveBeenCalledTimes(1);
 });
 test("valor divergente vai para análise e não envia email", async () => {
@@ -33,10 +33,10 @@ test("moeda divergente não aprova", async () => {
 test("webhook tardio não regride pedido pago", async () => {
   mockFind.mockResolvedValue({ ...baseOrder, status: "PAID", paymentId: "123" });
   expect(await processVerifiedPayment({ ...payment, status: "pending" })).toMatchObject({ ignored: "already_paid" });
-  expect(mockUpdate).not.toHaveBeenCalled();
+  expect(mockUpdateMany).not.toHaveBeenCalled();
 });
 test("duplicidade não dispara segundo email após claim recusado", async () => {
-  mockUpdateMany.mockResolvedValue({ count: 0 });
+  mockUpdateMany.mockResolvedValueOnce({ count: 1 }).mockResolvedValueOnce({ count: 0 });
   await processVerifiedPayment(payment);
   expect(mockEmail).not.toHaveBeenCalled();
 });
@@ -49,4 +49,15 @@ test("estorno altera status do pagamento original", async () => {
   mockFind.mockResolvedValue({ ...baseOrder, status: "PAID", paymentId: "123" });
   expect(await processVerifiedPayment({ ...payment, status: "refunded" })).toMatchObject({ status: "REFUNDED" });
   expect(mockEmail).not.toHaveBeenCalled();
+});
+
+test("atualização concorrente não sobrescreve status nem envia e-mail", async () => {
+  mockUpdateMany.mockResolvedValueOnce({ count: 0 });
+  expect(await processVerifiedPayment(payment)).toMatchObject({ ignored: "concurrent_transition" });
+  expect(mockEmail).not.toHaveBeenCalled();
+});
+test("reembolso de pagamento diferente não altera pedido", async () => {
+  mockFind.mockResolvedValue({ ...baseOrder, status: "PAID", paymentId: "888" });
+  expect(await processVerifiedPayment({ ...payment, status: "refunded" })).toMatchObject({ ignored: "refund_not_original_payment" });
+  expect(mockUpdateMany).not.toHaveBeenCalled();
 });
