@@ -1,3 +1,4 @@
+import { logFailure } from "@/lib/telemetry";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { leadSchema } from "@/lib/validation";
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
       );
     }
 
-    console.error("Erro ao cadastrar lead:", error);
+    logFailure("lead_registration_failed", error);
     return NextResponse.json(
       { ok: false, message: "Não foi possível concluir o cadastro agora." },
       { status: 500 },

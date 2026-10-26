@@ -57,6 +57,10 @@ export async function processVerifiedPayment(payment: MercadoPagoPayment) {
   });
   if (updated.count === 0) return { ignored: "concurrent_transition" };
 
+  if (nextStatus === ORDER_STATUS.PAID && order.status !== ORDER_STATUS.PAID) {
+    try { await prisma.analyticsEvent.create({data:{name:"compra_concluida"}}); } catch { /* analytics must never interfere with payment */ }
+  }
+
   if (nextStatus === ORDER_STATUS.PAID) {
     // Atomic claim ensures concurrent duplicate webhook calls do not send two emails.
     // A stale claim can be reclaimed if a worker crashed before sending.
@@ -72,7 +76,7 @@ export async function processVerifiedPayment(payment: MercadoPagoPayment) {
     });
     if (claimed.count === 1) {
       try {
-        const result = await sendPaymentConfirmationEmail(order.lead.email, order.lead.name, order.number, order.amountCents);
+        const result = await sendPaymentConfirmationEmail(order.lead.email, order.lead.name, order.number, order.amountCents, order.id);
         // Development simulation is NOT a delivered message: allow real delivery later.
         await prisma.order.update({
           where: { id: order.id },

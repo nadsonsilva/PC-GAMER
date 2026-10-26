@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import LeadModal from "@/components/LeadModal";
 import { product } from "@/lib/product";
+import { track } from "@/lib/analytics";
 
 const faqs = [
   ["O que está incluso?", "PC montado e testado com todos os componentes descritos na ficha técnica desta página."],
@@ -52,7 +53,7 @@ export default function Home() {
             <a href="#faq" className="hover:text-white">FAQ</a>
           </nav>
           <a
-            href={whatsappHref}
+            href={whatsappHref} onClick={() => track("clicou_whatsapp")}
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-extrabold transition hover:bg-emerald-500 sm:px-4"
@@ -186,7 +187,7 @@ export default function Home() {
       </footer>
 
       <a
-        href={whatsappHref}
+        href={whatsappHref} onClick={() => track("clicou_whatsapp")}
         target="_blank"
         rel="noreferrer"
         aria-label="Falar pelo WhatsApp"

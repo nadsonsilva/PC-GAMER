@@ -158,3 +158,17 @@ Na tabela `Order`, a Semana 4 usa principalmente:
 
 ## Semana 6 — Produção e entrega
 Veja [`docs/SEMANA_6.md`](docs/SEMANA_6.md) para deploy, analytics, observabilidade, CI, segurança, checklist de homologação e roteiro de defesa.
+
+
+## Complementos da Semana 6 (versão final)
+- `/admin`: painel protegido com tabelas de leads/pedidos e gráfico de eventos. Senha: token `ANALYTICS_ADMIN_TOKEN` (32+ caracteres).
+- `/api/events`: eventos locais do funil, sem dados pessoais; GA4 e Clarity ativados pelos IDs públicos no `.env`.
+- Alertas sanitizados no Discord através de `DISCORD_ERROR_WEBHOOK_URL`.
+- Comprovante PDF de pagamento aprovado: link assinado no e-mail de confirmação (`RECEIPT_SIGNING_SECRET`). Não é nota fiscal.
+- Confirmação via WhatsApp por link de mensagem preparada para envio manual (não dispara mensagens automaticamente).
+- Documentação adicional: `docs/API.md` e `docs/ENTREGA_FINAL.md`.
+- Execute migração nova `npx prisma migrate deploy` antes de iniciar a aplicação.
+
+**Atenção:** credenciais do Mercado Pago, SMTP, tokens administrativos e URLs privadas de webhook nunca devem ser commitados. Os serviços externos e o deploy requerem configuração e testes reais.
+
+- Logs de erro no Google Drive (opcional) com `GOOGLE_DRIVE_LOG_FOLDER_ID` e `GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON` da conta de serviço, compartilhando a pasta com a conta de serviço. O serviço de hospedagem deve permitir acesso à API Google Drive. Apenas o tipo de erro/evento é armazenado.

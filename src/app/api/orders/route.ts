@@ -1,3 +1,4 @@
+import { logFailure } from "@/lib/telemetry";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { product } from "@/lib/product";
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
       throw error;
     }
   } catch (error) {
-    console.error("Erro ao criar pedido/checkout:", error);
+    logFailure("order_creation_failed", error);
     return NextResponse.json(
       { ok: false, message: "Não foi possível iniciar o pagamento. Verifique a configuração do Mercado Pago." },
       { status: 500 },

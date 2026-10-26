@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { CheckCircle2, CreditCard, Loader2, Mail, MapPin, RefreshCw, X } from "lucide-react";
+import { track } from "@/lib/analytics";
 
 type Props = { open: boolean; onClose: () => void };
 type Step = "form" | "otp" | "checkout";
@@ -110,6 +111,7 @@ export default function LeadModal({ open, onClose }: Props) {
       }
 
       setSeconds(data.resendIn ?? 60);
+      track("enviou_formulario");
       setStep("otp");
     } catch {
       setError("Falha de conexão com o servidor. Tente novamente.");
@@ -136,6 +138,7 @@ export default function LeadModal({ open, onClose }: Props) {
         return;
       }
 
+      track("email_verificado");
       setStep("checkout");
     } catch {
       setError("Falha de conexão com o servidor. Tente novamente.");
@@ -191,6 +194,7 @@ export default function LeadModal({ open, onClose }: Props) {
       }
 
       setOrderNumber(data.orderNumber);
+      track("iniciou_checkout");
       window.location.assign(data.checkoutUrl);
     } catch {
       setError("Falha de conexão ao iniciar o pagamento.");

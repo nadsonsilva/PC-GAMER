@@ -1,3 +1,4 @@
+import { receiptSignature } from "@/lib/receipt";
 import net from "node:net";
 import tls from "node:tls";
 import type { Socket } from "node:net";
@@ -179,11 +180,13 @@ export async function sendOtpEmail(to: string, code: string) {
   ].join("\n"));
 }
 
-export async function sendPaymentConfirmationEmail(to: string, name: string, orderNumber: number, amountCents: number) {
+export async function sendPaymentConfirmationEmail(to: string, name: string, orderNumber: number, amountCents: number, orderId?: string) {
   const amount = (amountCents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   return sendSmtpEmail(to, `Pagamento confirmado - Pedido #${orderNumber} - PC Gamer`, [
     `Olá, ${name}!`, "", "O seu pagamento foi confirmado pelo Mercado Pago.",
     `Pedido: #${orderNumber}`, `Valor: ${amount}`, "Status: Pago", "",
+    ...(orderId && process.env.APP_URL ? [`Comprovante em PDF: ${process.env.APP_URL.replace(/\/$/, "")}/api/receipts/${orderId}?signature=${receiptSignature(orderId)}`] : []),
+    ...(process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ? [`Confirmar via WhatsApp: https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER.replace(/\D/g,"")}?text=${encodeURIComponent(`Olá, meu pagamento do pedido #${orderNumber} foi confirmado. Gostaria de informações sobre a entrega.`)}`] : []),
     "Obrigado pela compra!", "Equipe PC Gamer",
   ].join("\n"));
 }
