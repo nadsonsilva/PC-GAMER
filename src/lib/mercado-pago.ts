@@ -83,14 +83,18 @@ export async function createCheckoutPreference(input: {
     throw new Error(data.message || data.error || "Falha ao criar preferência no Mercado Pago.");
   }
 
-  const useSandbox = process.env.MP_USE_SANDBOX !== "false";
-  const checkoutUrl = useSandbox
-    ? data.sandbox_init_point || data.init_point
-    : data.init_point || data.sandbox_init_point;
+  const checkoutUrl = data.init_point;
 
-  if (!checkoutUrl) throw new Error("Mercado Pago não retornou URL de checkout.");
+  if (!checkoutUrl) {
+    throw new Error(
+      "Mercado Pago não retornou uma URL válida de checkout."
+    );
+  }
 
-  return { preferenceId: data.id, checkoutUrl };
+  return {
+    preferenceId: data.id,
+    checkoutUrl,
+  };
 }
 
 export async function getPayment(paymentId: string) {
