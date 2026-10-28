@@ -18,5 +18,5 @@ jobs:
       - run: npm run lint
       - run: npm run build
         env:
-          DATABASE_URL: file:./dev.db
+          DATABASE_URL: postgresql://test:test@localhost:5432/pcgamer_test
           OTP_HASH_SECRET: ci-only-not-for-production
