@@ -1,4 +1,3 @@
-import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { sendOtpEmail } from "@/lib/email";
 import { generateOtp, hashOtp, otpExpiresAt, secondsUntilResend } from "@/lib/otp";
@@ -24,7 +23,7 @@ export async function issueOtp(leadId: string, email: string) {
   const code = generateOtp();
   const now = new Date();
 
-  const otp = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+  const otp = await prisma.$transaction(async (tx) => {
     await tx.otp.updateMany({
       where: { leadId, usedAt: null, invalidatedAt: null },
       data: { invalidatedAt: now },
